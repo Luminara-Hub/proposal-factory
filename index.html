@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luminous Proposal Factory</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/lib/marked.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="luminous-header">
+            <div class="luminous-header-content">
+                <div class="luminous-logo" style="width:48px;height:48px;background:linear-gradient(135deg,#1a2a6c,#b21f1f,#fdbb2d);border-radius:50%;display:inline-block;margin-bottom:0.5rem;"></div>
+                <h1><span class="luminous-title-main">Luminous</span><br><span class="luminous-title-sub">Proposal Factory</span></h1>
+                <p class="luminous-welcome">Create, preview, share Namada governance proposals with&nbsp;ease.</p>
+            </div>
+        </header>
+
+        <div class="loader-card">
+            <div class="proposal-loader" style="display: flex; gap: 1rem; align-items: center; justify-content: center; flex-wrap: wrap;">
+                <label for="proposal-file" style="font-weight: 500;">Load Proposal:</label>
+                <input type="file" id="proposal-file" accept="application/json" style="margin-right: 1rem;">
+                <input type="url" id="proposal-url" class="form-input" placeholder="Paste proposal JSON URL" style="width: 300px;">
+                <button id="load-url-btn" class="secondary-button" type="button">Load from URL</button>
+                <button id="clear-btn" class="secondary-button" type="button">Clear</button>
+                <span id="load-warning" style="color: #e67e22; margin-left: 1rem;"></span>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.95rem; color: #666; text-align: center;">
+                See more example proposals at <a href="https://github.com/Luminara-Hub/govproposals" target="_blank">github.com/Luminara-Hub/govproposals</a>
+            </div>
+        </div>
+
+        <div class="main-flex-row">
+            <div class="input-section">
+                <div class="proposal-type-selector">
+                    <h2 class="section-title">Proposal Type</h2>
+                    <select id="proposal-type" class="form-select">
+                        <option value="signalling">Signalling Proposal</option>
+                        <option value="protocol">Protocol Change</option>
+                        <option value="pgf">PGF Proposal</option>
+                    </select>
+                    <div id="voting-power-info" class="info-box" style="margin-bottom: 1rem;"></div>
+                </div>
+                <div id="proposal-form" class="proposal-form">
+                    <h2 class="section-title">Basic Information</h2>
+                    <button id="next-btn-top" class="primary-button" style="margin-bottom: 1rem;">Next: Timing Settings</button>
+                    <div class="form-group">
+                        <label for="title">Title</label>
+                        <input type="text" id="title" class="form-input" placeholder="Proposal title">
+                    </div>
+                    <div class="form-group">
+                        <label for="authors">Authors</label>
+                        <input type="text" id="authors" class="form-input" placeholder="Author1, Author2">
+                    </div>
+                    <div class="form-group">
+                        <label for="discussions-to">Discussions URL <span class="tooltip" title="Link to the forum or discussion thread for this proposal.">?</span></label>
+                        <input type="url" id="discussions-to" class="form-input" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label for="created">Created Date</label>
+                        <input type="datetime-local" id="created" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="abstract">Abstract</label>
+                        <textarea id="abstract" class="form-textarea" placeholder="Brief description of the proposal"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="motivation">Motivation</label>
+                        <textarea id="motivation" class="form-textarea" placeholder="Why this proposal is needed"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="details">Details <span class="tooltip" title="Full proposal content in markdown format. Use headings, lists, and formatting as needed.">?</span></label>
+                        <textarea id="details" class="form-textarea" placeholder="Detailed proposal content in markdown format"></textarea>
+                        <div id="details-markdown-preview" class="markdown-preview" style="margin-top: 1rem; background: #f8f9fa; border-radius: 4px; padding: 1rem;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="requires">
+                            <input type="checkbox" id="requires-checkbox" class="form-checkbox">
+                            Requires (Proposal Number) <span class="tooltip" title="Check this if your proposal depends on another proposal passing first. Enter the required proposal's number.">?</span>
+                        </label>
+                        <div class="requires-warning" style="display: none;">
+                            ⚠️ Only activate this if this proposal depends on a different proposal passing first.
+                        </div>
+                        <input type="number" id="requires" class="form-input" value="0" min="0" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="author-address">Author Address (for 2000 NAM deposit) <span class="tooltip" title="The address that will pay the 2000 NAM deposit for submitting this proposal.">?</span></label>
+                        <input type="text" id="author-address" class="form-input" placeholder="tnam...">
+                    </div>
+
+                    <!-- Protocol Change specific field -->
+                    <div id="protocol-fields" class="conditional-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="wasm-code">WASM Bytecode <span class="tooltip" title="Paste the compiled WASM bytecode for the protocol change.">?</span></label>
+                            <textarea id="wasm-code" class="form-textarea" placeholder="Paste WASM bytecode here"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- PGF specific fields -->
+                    <div id="pgf-fields" class="conditional-fields" style="display: none;">
+                        <div class="form-group">
+                            <label>PGF Type <span class="tooltip" title="Choose the type of PGF proposal: Transfer (RPGF), Stream (CPGF), or IBC Transfer.">?</span></label>
+                            <select id="pgf-type" class="form-select">
+                                <option value="transfer">Transfer (RPGF)</option>
+                                <option value="stream">Stream (CPGF)</option>
+                                <option value="ibc">IBC Transfer</option>
+                            </select>
+                        </div>
+
+                        <div id="pgf-transfer-fields">
+                            <div class="form-group">
+                                <label for="transfer-amount">Amount (in NAM) <span class="tooltip" title="Amount to transfer, in NAM. Will be converted to base units.">?</span></label>
+                                <input type="number" id="transfer-amount" class="form-input" min="0" step="0.000001" placeholder="0.000000">
+                                <div class="input-hint">Amount will be converted to base units (1 NAM = 1,000,000 units)</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="transfer-target">Target Address <span class="tooltip" title="The address that will receive the transfer.">?</span></label>
+                                <input type="text" id="transfer-target" class="form-input" placeholder="tnam...">
+                            </div>
+                        </div>
+
+                        <div id="pgf-ibc-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="ibc-amount">Amount (in NAM) <span class="tooltip" title="Amount to transfer, in NAM, for IBC transfer.">?</span></label>
+                                <input type="number" id="ibc-amount" class="form-input" min="0" step="0.000001" placeholder="0.000000">
+                                <div class="input-hint">Amount will be converted to base units (1 NAM = 1,000,000 units)</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ibc-target">Target Address on IBC Chain <span class="tooltip" title="The address on the IBC chain that will receive the transfer.">?</span></label>
+                                <input type="text" id="ibc-target" class="form-input" placeholder="Address on IBC chain">
+                            </div>
+                            <div class="form-group">
+                                <label for="ibc-port">Port ID <span class="tooltip" title="IBC port identifier, usually 'transfer'.">?</span></label>
+                                <input type="text" id="ibc-port" class="form-input" placeholder="transfer">
+                            </div>
+                            <div class="form-group">
+                                <label for="ibc-channel">Channel ID <span class="tooltip" title="IBC channel identifier, e.g., 'channel-0'.">?</span></label>
+                                <input type="text" id="ibc-channel" class="form-input" placeholder="channel-0">
+                            </div>
+                        </div>
+
+                        <!-- Add Transfer Button -->
+                        <div class="form-group">
+                            <button type="button" id="add-transfer-btn" class="secondary-button">Add Transfer</button>
+                        </div>
+
+                        <!-- Transfers List -->
+                        <div class="transfers-list">
+                            <h3>Added Transfers <span class="tooltip" title="List of all transfers added to this PGF proposal. You can add or remove transfers here.">?</span></h3>
+                            <div id="transfers-preview" class="transfers-preview"></div>
+                        </div>
+                    </div>
+
+                    <button id="next-btn" class="primary-button sticky-next-btn">Next: Timing Settings</button>
+                </div>
+
+                <div id="timing-form" class="proposal-form" style="display: none;">
+                    <h2 class="section-title">Timing Settings</h2>
+                    
+                    <div class="form-group">
+                        <label for="current-epoch">Current Epoch</label>
+                        <input type="number" id="current-epoch" class="form-input" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="voting-start-hours">Voting Start (ASAP + hours)</label>
+                        <div class="input-hint">Maximum 48 hours delay</div>
+                        <input type="number" id="voting-start-hours" class="form-input" min="0" max="48" value="0" required>
+                        <div class="epoch-preview" id="voting-start-epoch-preview"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Voting Duration</label>
+                        <div class="input-hint">Minimum 3 days, hours in increments of 6</div>
+                        <div class="duration-inputs">
+                            <div class="duration-input">
+                                <input type="number" id="voting-duration-days" class="form-input" min="3" value="3" required>
+                                <span>days</span>
+                            </div>
+                            <div class="duration-input">
+                                <input type="number" id="voting-duration-hours" class="form-input" min="0" max="18" step="6" value="0" required>
+                                <span>hours</span>
+                            </div>
+                        </div>
+                        <div class="epoch-preview" id="voting-end-epoch-preview"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Activation Delay</label>
+                        <div class="input-hint">Minimum 6 hours</div>
+                        <div class="duration-inputs">
+                            <div class="duration-input">
+                                <input type="number" id="activation-delay-days" class="form-input" min="0" value="0" required>
+                                <span>days</span>
+                            </div>
+                            <div class="duration-input">
+                                <input type="number" id="activation-delay-hours" class="form-input" min="6" step="1" value="6" required>
+                                <span>hours</span>
+                            </div>
+                        </div>
+                        <div class="epoch-preview" id="activation-epoch-preview"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="back-btn" class="secondary-button">Back</button>
+                        <button id="create-proposal-btn" class="primary-button">Create Proposal</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="json-section">
+                <h2 class="section-title">JSON Output</h2>
+                <div id="json-error" style="color: #e74c3c; margin-bottom: 0.5rem;"></div>
+                <textarea id="json-output" placeholder="Proposal JSON will appear here..." readonly></textarea>
+                <button id="download-json-btn" class="secondary-button" type="button">Download JSON</button>
+                <button id="preview-btn">Preview Proposal</button>
+            </div>
+        </div>
+
+        <footer class="luminous-footer">
+            <div>Made with ❤️ for the Namada community. Visit <a href="https://namada.community/" target="_blank">namada.community</a> &middot; <a href="https://github.com/Luminara-Hub/govproposals" target="_blank">GitHub</a></div>
+        </footer>
+
+        <div id="preview-section" class="preview-section" style="display: none;">
+            <h2>Proposal Preview</h2>
+            <div class="proposal-preview">
+                <div class="proposal-header">
+                    <h1 id="proposal-title"></h1>
+                    <div class="proposal-meta">
+                        <span>By <span id="proposal-author"></span></span>
+                        <span>Created <span id="proposal-date"></span></span>
+                    </div>
+                </div>
+
+                <div class="proposal-info">
+                    <h2>Proposal Information</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Voting Start</label>
+                            <div id="voting-start"></div>
+                        </div>
+                        <div class="info-item">
+                            <label>Voting End</label>
+                            <div id="voting-end"></div>
+                        </div>
+                        <div class="info-item">
+                            <label>Activation Epoch</label>
+                            <div id="activation-epoch"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <main>
+                    <div id="proposal-content" class="markdown-content"></div>
+                </main>
+
+                <section class="transfers-section">
+                    <h2>Transfers</h2>
+                    <div id="transfers-list"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html> 
